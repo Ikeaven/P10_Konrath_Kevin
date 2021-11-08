@@ -1,6 +1,12 @@
 from django.http import response
-from django.shortcuts import render
+from rest_framework.viewsets import ModelViewSet
 
-# Create your views here.
-def index(request):
-    return response.HttpResponse("Ceci est l'app gestion projet")
+from gestion_projet.models import Projets
+from gestion_projet.serializers import ProjetSerializer
+
+class ProjetViewset(ModelViewSet):
+
+    serializer_class = ProjetSerializer
+
+    def get_queryset(self):
+        return Projets.objects.all()
