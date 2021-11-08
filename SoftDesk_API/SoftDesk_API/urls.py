@@ -17,7 +17,10 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
+    # TODO : VV à supprimer VV
     path('authentication/', include('authentication.urls')),
+
+    path('projets/', include("gestion_projet.urls")),
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls'))
 ]
