@@ -8,7 +8,7 @@ from gestion_projet.serializers import ProjetSerializer
 class ProjetViewset(ModelViewSet):
 
     serializer_class = ProjetSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Projets.objects.all()
