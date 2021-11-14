@@ -8,7 +8,8 @@ class Projets(models.Model):
     title = models.CharField(max_length=250)
     description = models.CharField(max_length=800, blank=True, null=True)
     type = models.CharField(max_length=250)
-    author = models.ManyToManyField(User, through='Contributors')
+    # TODO : passer l'author en manyToMany
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
 
 class Contributors(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
