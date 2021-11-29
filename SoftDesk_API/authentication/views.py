@@ -29,6 +29,8 @@ def signup(request):
         if not last_name:
             raise ValueError(_('last_name must be set'))
         email = request.POST.get('email')
+        if not email:
+            raise ValueError(_('email must be set'))
         password = request.POST.get('password')
 
 
