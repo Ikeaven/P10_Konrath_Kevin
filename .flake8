@@ -1,0 +1,5 @@
+[flake8]
+
+ignore = env/
+exclude = */migrations/*
+max-line-length = 119

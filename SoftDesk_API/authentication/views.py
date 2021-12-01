@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import User
 from .serializers import UserSerializer
 
+
 # TODO: pas besoin de récupérer les users dans ce projet - A supprimer !!
 class UserAPIView(APIView):
 
@@ -15,6 +16,7 @@ class UserAPIView(APIView):
         user = User.objects.all()
         serializer = UserSerializer(user, many=True)
         return Response(serializer.data)
+
 
 @api_view(['POST'])
 def signup(request):
@@ -33,7 +35,6 @@ def signup(request):
             raise ValueError(_('email must be set'))
         password = request.POST.get('password')
 
-
     user = User.objects.filter(email=email)
     if not user.exists():
         user = User.objects.create(
@@ -47,4 +48,4 @@ def signup(request):
             login(request, user)
             return Response({"message": _(f'user {first_name} {last_name} created')})
     else:
-        return Response({"message":_("le user n'a pas pu être créé")})
+        return Response({"message": _("le user n'a pas pu être créé")})
