@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 # from django.db.models.deletion import CASCADE
 
 from authentication.models import User
@@ -9,7 +10,7 @@ class Projets(models.Model):
     description = models.CharField(max_length=800, blank=True, null=True)
     type = models.CharField(max_length=250)
     # TODO : passer l'author en manyToMany
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 
 class Contributors(models.Model):
