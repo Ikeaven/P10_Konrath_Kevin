@@ -119,6 +119,9 @@ class ProjectsUserList(APIView):
 
 
 class DeleteContributor(APIView):
+    """
+    Delete a contributor of the selected project.
+    """
     def delete(self, request, project_id, user_id):
         try:
             contributor = Contributors.objects.get(user=user_id, project=project_id)
