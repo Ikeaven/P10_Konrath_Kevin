@@ -1,21 +1,25 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
 # from django.db.models.deletion import CASCADE
 
-from authentication.models import User
+# from authentication.models import User
 
 
-class Projets(models.Model):
+class Projects(models.Model):
     title = models.CharField(max_length=250)
     description = models.CharField(max_length=800, blank=True, null=True)
     type = models.CharField(max_length=250)
     # TODO : passer l'author en manyToMany
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='user', on_delete=models.CASCADE)
 
+    class Meta:
+        verbose_name = _('Project')
+        verbose_name_plural = _('Projects')
 
 class Contributors(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    projet = models.ForeignKey(Projets, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    projet = models.ForeignKey(Projects, on_delete=models.CASCADE)
     # TODO : permissions choices
     permission = models.CharField(max_length=250, choices={('test', 'test permission')})
     role = models.CharField(max_length=250)

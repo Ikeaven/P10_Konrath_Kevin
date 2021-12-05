@@ -1,10 +1,15 @@
-# from django.db.models import fields
 from rest_framework import serializers
 
-from gestion_projet.models import Projets
+from gestion_projet.models import Projects
 
 
-class ProjetSerializer(serializers.ModelSerializer):
+class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Projets
+        model = Projects
         fields = ['id', 'title', 'description', 'type', 'author']
+
+
+class InputProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+       model = Projects
+       fields = ['id', 'title', 'description', 'type']
