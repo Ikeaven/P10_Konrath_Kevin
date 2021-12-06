@@ -31,11 +31,12 @@ class Contributors(models.Model):
 
 class Issues(models.Model):
     title = models.CharField(max_length=250)
+    project_id = models.ForeignKey(Projects, related_name='project', on_delete=models.CASCADE)
+    author_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='author', on_delete=models.CASCADE)
+
     description = models.CharField(max_length=350, blank=True, null=True)
     tag = models.CharField(max_length=150, blank=True, null=True)
     priority =models.CharField(max_length=150, blank=True, null=True)
-    project_id = models.ForeignKey(Projects, related_name='project', on_delete=models.CASCADE)
     status = models.CharField(max_length=250, null=True, blank=True)
-    author_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='author', on_delete=models.CASCADE)
     assignee_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='assignee_user', on_delete=SET_NULL, blank=True, null=True)
     created_time = models.DateTimeField(auto_now_add=True)

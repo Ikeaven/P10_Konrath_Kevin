@@ -15,8 +15,8 @@ from rest_framework.views import APIView
 
 from authentication.models import User
 from authentication.serializers import UserSerializer
-from gestion_projet.models import Projects, Contributors
-from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer
+from gestion_projet.models import Projects, Contributors, Issues
+from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer, IssueSerializer, InputIssueSerializer
 
 
 # class ProjetViewset(ModelViewSet):
@@ -46,8 +46,9 @@ class ProjectList(APIView):
     def post(self, request, format=None):
         serializer = InputProjectSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            project = serializer.save(author=request.user)
+            project_serializer = ProjectSerializer(project)
+            return Response(project_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -72,14 +73,15 @@ class ProjectDetail(APIView):
         project = self.get_object(pk)
         serializer = InputProjectSerializer(project, data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user)
+            serializer.save()
+            # TODO : passer le ProjectSerializer
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         project = self.get_object(pk)
         project.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response('Project Deleted', status=status.HTTP_200_OK)
 
 
 class ProjectsUserList(APIView):
@@ -131,4 +133,55 @@ class DeleteContributor(APIView):
             contributor.delete()
             return Response(_("user deleted of this project"))
         except Contributors.DoesNotExist:
+            raise Http404
+
+
+class IssuesList(APIView):
+    """
+    List all issues of a selected project, or create an issue.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk, format=None):
+        issues = Issues.objects.filter(project_id=pk)
+        serializer = IssueSerializer(issues, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, pk, format=None):
+        serializer = InputIssueSerializer(data=request.data)
+        try:
+            project = Projects.objects.get(pk=pk)
+        except Projects.DoesNotExist:
+            raise Http404
+        if serializer.is_valid():
+            issue = serializer.save(author_user_id=request.user, project_id=project)
+            issue_serializer = IssueSerializer(issue)
+            return Response(issue_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class IssueDetail(APIView):
+    """
+    Update an issue or delete it.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, project_id, issue_id):
+        issue = Issues.objects.get(pk=issue_id)
+        print(issue.author_user_id)
+        serializer = InputIssueSerializer(issue, data=request.data)
+        if serializer.is_valid():
+            # TODO : trouver un autre moyen, si on ne veut pas changer le titre...
+            issue = serializer.save(author_user_id=issue.author_user_id, project_id=issue.project_id )
+            issue_serializer = IssueSerializer(issue)
+            return Response(issue_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, project_id, issue_id):
+        try:
+            issue = Issues.objects.get(pk=issue_id, project_id=project_id)
+            issue.delete()
+            return Response(_("issue deleted of this project"))
+        except Issues.DoesNotExist:
             raise Http404
