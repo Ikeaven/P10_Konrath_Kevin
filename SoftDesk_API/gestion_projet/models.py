@@ -19,8 +19,11 @@ class Projects(models.Model):
         verbose_name = _('Project')
         verbose_name_plural = _('Projects')
 
+    def __str__(self):
+        return  'id : ' + str(self.id) + ' - title : ' + str(self.title)
+
 class Contributors(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='contrib', on_delete=models.CASCADE)
     project = models.ForeignKey(Projects, on_delete=models.CASCADE)
     # TODO : permissions choices
     permission = models.CharField(max_length=250, choices={('test', 'test permission')})
@@ -30,6 +33,9 @@ class Contributors(models.Model):
         unique_together = ('user', 'project')
         verbose_name = _('Contributor')
         verbose_name_plural = _('Contributors')
+
+    def __str__(self):
+        return str(self.user)
 
 class Issues(models.Model):
     title = models.CharField(max_length=250)

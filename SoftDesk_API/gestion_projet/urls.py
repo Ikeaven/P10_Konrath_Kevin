@@ -9,7 +9,7 @@ from gestion_projet import views
 urlpatterns = [
     path('projects/', views.ProjectList.as_view()),
     path('projects/<int:pk>/', views.ProjectDetail.as_view()),
-    path('projects/<int:pk>/users/', views.ProjectsUserList.as_view()),
+    path('projects/<int:pk>/users/', views.ContributorsList.as_view()),
     path('projects/<int:project_id>/users/<int:user_id>/', views.DeleteContributor.as_view()),
     path('projects/<int:pk>/issues/', views.IssuesList.as_view()),
     path('projects/<int:project_id>/issues/<int:issue_id>/', views.IssueDetail.as_view()),

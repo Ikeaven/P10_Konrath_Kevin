@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
+from gestion_projet.serializers import ContributorsSerializer
 
 
 # from rest_framework.fields import CurrentUserDefault
@@ -40,11 +41,15 @@ class ProjectList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
+        # TODO : mettre un filtre à le requete, et pas remonter tous les projets ...
+
         projects = Projects.objects.all()
+
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
+
         serializer = InputProjectSerializer(data=request.data)
         if serializer.is_valid():
             project = serializer.save(author=request.user)
@@ -59,19 +64,20 @@ class ProjectDetail(APIView):
     """
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
-    def get_object(self, pk):
+    def get_object(self, request, project_id):
         try:
-            return Projects.objects.get(pk=pk)
+            project = Projects.objects.get(pk=project_id)
+            return project
         except Projects.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        project = self.get_object(pk)
+        project = self.get_object(request, pk)
         serializer = ProjectSerializer(project)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        project = self.get_object(pk)
+        project = self.get_object(request, pk)
         self.check_object_permissions(request, project)
         serializer = ProjectSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
@@ -80,13 +86,13 @@ class ProjectDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        project = self.get_object(pk)
+        project = self.get_object(request, pk)
         self.check_object_permissions(request, project)
         project.delete()
         return Response('Project Deleted', status=status.HTTP_200_OK)
 
 
-class ProjectsUserList(APIView):
+class ContributorsList(APIView):
     """
     List all project's collaborators, or attach a new collaborator.
     """
@@ -117,8 +123,9 @@ class ProjectsUserList(APIView):
         except Contributors.DoesNotExist:
 
             if serializer.is_valid():
-                serializer.save(project=project, user=user)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                contributor = serializer.save(project=project, user=user)
+                contributo_serializer = ContributorsSerializer(contributor)
+                return Response(contributo_serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

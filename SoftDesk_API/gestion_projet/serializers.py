@@ -5,10 +5,15 @@ from rest_framework import serializers
 from gestion_projet.models import Projects, Contributors, Issues, Comments
 
 
+
+
+
 class ProjectSerializer(serializers.ModelSerializer):
+    contributor = serializers.StringRelatedField(many=True)
+    author = serializers.ReadOnlyField(source='author.email')
     class Meta:
         model = Projects
-        fields = ['id', 'title', 'description', 'type', 'author']
+        fields = ['id', 'title', 'description', 'type', 'author', 'contributor']
 
 
 class InputProjectSerializer(serializers.ModelSerializer):
@@ -16,16 +21,16 @@ class InputProjectSerializer(serializers.ModelSerializer):
        model = Projects
        fields = ['id', 'title', 'description', 'type']
 
+class ContributorsSerializer(serializers.ModelSerializer):
+    project = serializers.StringRelatedField(many=True)
+    class Meta:
+        model = Contributors
+        fields = ['id', 'user', 'project', 'permission', 'role']
 class ProjectsUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contributors
         fields = ['permission', 'role']
 
-
-class ContributorsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Contributors
-        fields = ['user', 'project', 'permission', 'role']
 
 class IssueSerializer(serializers.ModelSerializer):
     class Meta:
