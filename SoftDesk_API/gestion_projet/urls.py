@@ -12,6 +12,8 @@ urlpatterns = [
     path('projects/<int:pk>/users/', views.ProjectsUserList.as_view()),
     path('projects/<int:project_id>/users/<int:user_id>/', views.DeleteContributor.as_view()),
     path('projects/<int:pk>/issues/', views.IssuesList.as_view()),
-    path('projects/<int:project_id>/issues/<int:issue_id>/', views.IssueDetail.as_view())
+    path('projects/<int:project_id>/issues/<int:issue_id>/', views.IssueDetail.as_view()),
+    path('projects/<int:project_id>/issues/<int:issue_id>/comments/', views.CommentsList.as_view()),
+    path('projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>/', views.CommentDetail.as_view()),
     # path('', include(router.urls)),
 ]

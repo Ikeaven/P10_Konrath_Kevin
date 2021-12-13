@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models import fields
 from rest_framework import serializers
 
-from gestion_projet.models import Projects, Contributors, Issues
+from gestion_projet.models import Projects, Contributors, Issues, Comments
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -36,3 +36,14 @@ class InputIssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issues
         fields = ['title', 'description', 'tag', 'priority', 'status', 'assignee_user_id']
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = '__all__'
+
+
+class InputCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = ['description']

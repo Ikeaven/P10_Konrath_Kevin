@@ -4,6 +4,7 @@ from django.http import Http404
 from rest_framework import status
 from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
+from rest_framework import permissions
 # from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,8 +16,8 @@ from rest_framework.views import APIView
 
 from authentication.models import User
 from authentication.serializers import UserSerializer
-from gestion_projet.models import Projects, Contributors, Issues
-from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer, IssueSerializer, InputIssueSerializer
+from gestion_projet.models import Projects, Contributors, Issues, Comments
+from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
 
 
 # class ProjetViewset(ModelViewSet):
@@ -48,7 +49,7 @@ class ProjectList(APIView):
         if serializer.is_valid():
             project = serializer.save(author=request.user)
             project_serializer = ProjectSerializer(project)
-            return Response(project_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(project_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -71,10 +72,9 @@ class ProjectDetail(APIView):
 
     def put(self, request, pk, format=None):
         project = self.get_object(pk)
-        serializer = InputProjectSerializer(project, data=request.data)
+        serializer = ProjectSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            # TODO : passer le ProjectSerializer
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -116,7 +116,7 @@ class ProjectsUserList(APIView):
 
             if serializer.is_valid():
                 serializer.save(project=project, user=user)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -157,7 +157,7 @@ class IssuesList(APIView):
         if serializer.is_valid():
             issue = serializer.save(author_user_id=request.user, project_id=project)
             issue_serializer = IssueSerializer(issue)
-            return Response(issue_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -169,11 +169,9 @@ class IssueDetail(APIView):
 
     def put(self, request, project_id, issue_id):
         issue = Issues.objects.get(pk=issue_id)
-        print(issue.author_user_id)
-        serializer = InputIssueSerializer(issue, data=request.data)
+        serializer = InputIssueSerializer(issue, data=request.data, partial=True)
         if serializer.is_valid():
-            # TODO : trouver un autre moyen, si on ne veut pas changer le titre...
-            issue = serializer.save(author_user_id=issue.author_user_id, project_id=issue.project_id )
+            issue = serializer.save(author_user_id=issue.author_user_id, project_id=issue.project_id)
             issue_serializer = IssueSerializer(issue)
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -184,4 +182,60 @@ class IssueDetail(APIView):
             issue.delete()
             return Response(_("issue deleted of this project"))
         except Issues.DoesNotExist:
+            raise Http404
+
+
+class CommentsList(APIView):
+    """
+    List Comments binded to an issue, or create a comment
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id, issue_id):
+        # TODO ; ajouter la verification du projet
+        comment = Comments.objects.filter(issue_id=issue_id)
+        serializer = CommentSerializer(comment, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, project_id, issue_id):
+        serializer = InputCommentSerializer(data=request.data)
+        issue = Issues.objects.get(id=issue_id)
+        if serializer.is_valid():
+            comment = serializer.save(author_user_id=request.user, issue_id=issue)
+            comment_serializer = CommentSerializer(comment)
+            return Response(comment_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentDetail(APIView):
+    """
+    update / delete / get : comment with an id
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, project_id, issue_id, comment_id):
+        # TODO : recuperer projet et issue
+        comment = Comments.objects.get(id=comment_id)
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
+        if serializer.is_valid():
+            comment = serializer.save()
+            comment_serializer = CommentSerializer(comment)
+            return Response(comment_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, project_id, issue_id, comment_id):
+        try:
+            comment = Comments.objects.get(id=comment_id)
+            comment.delete()
+            return Response(_('comment deleted'))
+        except Comments.DoesNotExist:
+            raise Http404
+
+    def get(self, request, project_id, issue_id, comment_id):
+        try:
+            comment = Comments.objects.get(id=comment_id)
+            serializer = CommentSerializer(comment)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Comments.DoesNotExist:
             raise Http404

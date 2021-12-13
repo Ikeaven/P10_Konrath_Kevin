@@ -28,6 +28,8 @@ class Contributors(models.Model):
 
     class Meta:
         unique_together = ('user', 'project')
+        verbose_name = _('Contributor')
+        verbose_name_plural = _('Contributors')
 
 class Issues(models.Model):
     title = models.CharField(max_length=250)
@@ -40,3 +42,18 @@ class Issues(models.Model):
     status = models.CharField(max_length=250, null=True, blank=True)
     assignee_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='assignee_user', on_delete=SET_NULL, blank=True, null=True)
     created_time = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Issue')
+        verbose_name_plural = _('Issues')
+
+
+class Comments(models.Model):
+    description = models.CharField(max_length = 250)
+    author_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    issue_id = models.ForeignKey(Issues, on_delete=models.CASCADE)
+    created_time = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Comment')
+        verbose_name_plural = _('Comments')
