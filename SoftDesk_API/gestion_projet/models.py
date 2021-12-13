@@ -34,7 +34,7 @@ class Contributors(models.Model):
 class Issues(models.Model):
     title = models.CharField(max_length=250)
     project_id = models.ForeignKey(Projects, related_name='project', on_delete=models.CASCADE)
-    author_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='author', on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='author', on_delete=models.CASCADE)
 
     description = models.CharField(max_length=350, blank=True, null=True)
     tag = models.CharField(max_length=150, blank=True, null=True)
@@ -50,7 +50,7 @@ class Issues(models.Model):
 
 class Comments(models.Model):
     description = models.CharField(max_length = 250)
-    author_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     issue_id = models.ForeignKey(Issues, on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
 

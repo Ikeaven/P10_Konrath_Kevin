@@ -18,7 +18,7 @@ from authentication.models import User
 from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
 from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
-
+from gestion_projet.permissions import IsOwnerOrReadOnly
 
 # class ProjetViewset(ModelViewSet):
 
@@ -57,7 +57,7 @@ class ProjectDetail(APIView):
     """
     Retrieve, update or delete a project instance.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_object(self, pk):
         try:
@@ -72,6 +72,7 @@ class ProjectDetail(APIView):
 
     def put(self, request, pk, format=None):
         project = self.get_object(pk)
+        self.check_object_permissions(request, project)
         serializer = ProjectSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -80,6 +81,7 @@ class ProjectDetail(APIView):
 
     def delete(self, request, pk, format=None):
         project = self.get_object(pk)
+        self.check_object_permissions(request, project)
         project.delete()
         return Response('Project Deleted', status=status.HTTP_200_OK)
 
@@ -125,7 +127,7 @@ class DeleteContributor(APIView):
     Delete a contributor of the selected project.
     """
     # TODO : ajout permission isAuthor ?
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def delete(self, request, project_id, user_id):
         try:
@@ -155,7 +157,7 @@ class IssuesList(APIView):
         except Projects.DoesNotExist:
             raise Http404
         if serializer.is_valid():
-            issue = serializer.save(author_user_id=request.user, project_id=project)
+            issue = serializer.save(author=request.user, project_id=project)
             issue_serializer = IssueSerializer(issue)
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -165,13 +167,14 @@ class IssueDetail(APIView):
     """
     Update an issue or delete it.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def put(self, request, project_id, issue_id):
         issue = Issues.objects.get(pk=issue_id)
+        self.check_object_permissions(request, issue)
         serializer = InputIssueSerializer(issue, data=request.data, partial=True)
         if serializer.is_valid():
-            issue = serializer.save(author_user_id=issue.author_user_id, project_id=issue.project_id)
+            issue = serializer.save(author_user_id=issue.author, project_id=issue.project_id)
             issue_serializer = IssueSerializer(issue)
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -179,6 +182,7 @@ class IssueDetail(APIView):
     def delete(self, request, project_id, issue_id):
         try:
             issue = Issues.objects.get(pk=issue_id, project_id=project_id)
+            self.check_object_permissions(request, issue)
             issue.delete()
             return Response(_("issue deleted of this project"))
         except Issues.DoesNotExist:
@@ -202,7 +206,7 @@ class CommentsList(APIView):
         serializer = InputCommentSerializer(data=request.data)
         issue = Issues.objects.get(id=issue_id)
         if serializer.is_valid():
-            comment = serializer.save(author_user_id=request.user, issue_id=issue)
+            comment = serializer.save(author=request.user, issue_id=issue)
             comment_serializer = CommentSerializer(comment)
             return Response(comment_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -212,11 +216,12 @@ class CommentDetail(APIView):
     """
     update / delete / get : comment with an id
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def put(self, request, project_id, issue_id, comment_id):
         # TODO : recuperer projet et issue
         comment = Comments.objects.get(id=comment_id)
+        self.check_object_permissions(request, comment)
         serializer = CommentSerializer(comment, data=request.data, partial=True)
         if serializer.is_valid():
             comment = serializer.save()
@@ -227,6 +232,7 @@ class CommentDetail(APIView):
     def delete(self, request, project_id, issue_id, comment_id):
         try:
             comment = Comments.objects.get(id=comment_id)
+            self.check_object_permissions(request, comment)
             comment.delete()
             return Response(_('comment deleted'))
         except Comments.DoesNotExist:
