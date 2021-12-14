@@ -18,8 +18,8 @@ from gestion_projet.serializers import ContributorsSerializer
 from authentication.models import User
 from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
-from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, ProjectsUserSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
-from gestion_projet.permissions import IsOwnerOrReadOnly
+from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, CreateContributorSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
+from gestion_projet.permissions import IsOwnerOrReadOnly, IsOwnerOrContributor
 
 # class ProjetViewset(ModelViewSet):
 
@@ -41,15 +41,13 @@ class ProjectList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
-        # TODO : mettre un filtre à le requete, et pas remonter tous les projets ...
-
-        projects = Projects.objects.all()
+        projects = Projects.objects.filter(author=request.user) | Projects.objects.filter(contributor=request.user)
 
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
-
+        # TODO : ajouter une contribution
         serializer = InputProjectSerializer(data=request.data)
         if serializer.is_valid():
             project = serializer.save(author=request.user)
@@ -62,7 +60,7 @@ class ProjectDetail(APIView):
     """
     Retrieve, update or delete a project instance.
     """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrContributor, IsOwnerOrReadOnly]
 
     def get_object(self, request, project_id):
         try:
@@ -73,6 +71,8 @@ class ProjectDetail(APIView):
 
     def get(self, request, pk, format=None):
         project = self.get_object(request, pk)
+        # TODO : add permissions du projet
+        self.check_object_permissions(request, project)
         serializer = ProjectSerializer(project)
         return Response(serializer.data)
 
@@ -112,7 +112,7 @@ class ContributorsList(APIView):
             user = User.objects.get(email=request.POST.get('email'))
         except User.DoesNotExist:
             raise Http404
-        serializer = ProjectsUserSerializer(data=request.data)
+        serializer = CreateContributorSerializer(data=request.data)
         try:
             project = Projects.objects.get(pk=pk)
         except Projects.DoesNotExist:
@@ -123,9 +123,10 @@ class ContributorsList(APIView):
         except Contributors.DoesNotExist:
 
             if serializer.is_valid():
-                contributor = serializer.save(project=project, user=user)
-                contributo_serializer = ContributorsSerializer(contributor)
-                return Response(contributo_serializer.data, status=status.HTTP_200_OK)
+                serializer.save(project=project, user=user)
+                contributor = Contributors.objects.get(project=project, user=user)
+                contributor_serializer = ContributorsSerializer(contributor)
+                return Response(contributor_serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

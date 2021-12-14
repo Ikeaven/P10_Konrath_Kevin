@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from gestion_projet.models import Projects
 
 from gestion_projet.models import Contributors
 
@@ -13,11 +14,14 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
         return obj.author == request.user
 
-# class IsOwnerOrContributor(permissions.BasePermission):
-#     """
-#     Object-level permission to only allow owners or contributors of a project
-#     """
-#     def has_object_permission(self, request, view, project):
-
-#         Contributors.objects.filter(user=request.user, project=project)
-#         print(Contributors)
+class IsOwnerOrContributor(permissions.BasePermission):
+    """
+    Object-level permission to only allow owners or contributors of a project
+    """
+    def has_object_permission(self, request, view, project):
+        contributor = (Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project=project))
+        author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
+        if contributor.exists() or author.exists():
+            return True
+        else:
+            return False

@@ -22,11 +22,13 @@ class InputProjectSerializer(serializers.ModelSerializer):
        fields = ['id', 'title', 'description', 'type']
 
 class ContributorsSerializer(serializers.ModelSerializer):
-    project = serializers.StringRelatedField(many=True)
+    project = serializers.StringRelatedField()
     class Meta:
         model = Contributors
         fields = ['id', 'user', 'project', 'permission', 'role']
-class ProjectsUserSerializer(serializers.ModelSerializer):
+
+
+class CreateContributorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contributors
         fields = ['permission', 'role']
