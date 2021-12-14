@@ -147,6 +147,8 @@ class DeleteContributor(APIView):
     def delete(self, request, project_id, user_id):
         try:
             contributor = Contributors.objects.get(user=user_id, project=project_id)
+            projet = Projects.objects.get(id=project_id)
+            self.check_object_permissions(request, projet)
             contributor.delete()
             return Response(_("user deleted of this project"))
         except Contributors.DoesNotExist:
