@@ -23,10 +23,16 @@ class Projects(models.Model):
         return  'id : ' + str(self.id) + ' - title : ' + str(self.title)
 
 class Contributors(models.Model):
+
+    PERMISSIONS_CHOICES = (
+        ("1","author"),
+        ("2", "contributor"),
+    )
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='contrib', on_delete=models.CASCADE)
     project = models.ForeignKey(Projects, on_delete=models.CASCADE)
     # TODO : permissions choices
-    permission = models.CharField(max_length=250, choices={('test', 'test permission')})
+    permission = models.CharField(max_length=250, choices=PERMISSIONS_CHOICES)
     role = models.CharField(max_length=250)
 
     class Meta:
