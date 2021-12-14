@@ -52,6 +52,13 @@ class ProjectList(APIView):
         if serializer.is_valid():
             project = serializer.save(author=request.user)
             project_serializer = ProjectSerializer(project)
+            Contributors.objects.create(
+                user = request.user,
+                project = project,
+                # TODO : change permissions
+                permission = 'test',
+                role = 'auhtor'
+            )
             return Response(project_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
