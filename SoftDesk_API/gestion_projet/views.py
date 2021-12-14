@@ -47,7 +47,6 @@ class ProjectList(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        # TODO : ajouter une contribution
         serializer = InputProjectSerializer(data=request.data)
         if serializer.is_valid():
             project = serializer.save(author=request.user)
@@ -78,7 +77,6 @@ class ProjectDetail(APIView):
 
     def get(self, request, project_id, format=None):
         project = self.get_object(request, project_id)
-        # TODO : add permissions du projet
         self.check_object_permissions(request, project)
         serializer = ProjectSerializer(project)
         return Response(serializer.data)
@@ -96,24 +94,24 @@ class ProjectDetail(APIView):
         project = self.get_object(request, project_id)
         self.check_object_permissions(request, project)
         project.delete()
-        return Response('Project Deleted', status=status.HTTP_200_OK)
+        return Response({"detail":'Project Deleted'}, status=status.HTTP_200_OK)
 
 
 class ContributorsList(APIView):
     """
     List all project's collaborators, or attach a new collaborator.
     """
-
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
 
     def get(self, request, project_id, format=None):
         users = User.objects.filter(contributions=project_id)
-        if users is None:
-            # TODO c'est quoi ce print ??
-            print('Dommage...')
-        else:
+        project = Projects.objects.get(id=project_id)
+        self.check_object_permissions(request, project)
+        if users.exists():
             serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+            return Response(serializer.data)
+        else:
+            return Response({"detail":"No Collaborator for this project"}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, project_id, format=None):
         try:
@@ -123,6 +121,7 @@ class ContributorsList(APIView):
         serializer = CreateContributorSerializer(data=request.data)
         try:
             project = Projects.objects.get(pk=project_id)
+            self.check_object_permissions(request, project)
         except Projects.DoesNotExist:
             raise Http404
         try:
@@ -142,7 +141,6 @@ class DeleteContributor(APIView):
     """
     Delete a contributor of the selected project.
     """
-    # TODO : ajout permission isAuthor ?
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def delete(self, request, project_id, user_id):
@@ -152,10 +150,10 @@ class DeleteContributor(APIView):
             projet = Projects.objects.get(id=project_id)
             self.check_object_permissions(request, projet)
             if contributor.user == projet.author:
-                return Response(_({"detail":"Author cannot be deleted"}), status=status.HTTP_403_FORBIDDEN)
+                return Response(({"detail":"Author cannot be deleted"}), status=status.HTTP_403_FORBIDDEN)
             else:
                 contributor.delete()
-                return Response(_({"detail":"user deleted of this project"}))
+                return Response(({"detail":"user deleted of this project"}))
         except Contributors.DoesNotExist:
             raise Http404
 
@@ -209,7 +207,7 @@ class IssueDetail(APIView):
             issue = Issues.objects.get(pk=issue_id, project_id=project_id)
             self.check_object_permissions(request, issue)
             issue.delete()
-            return Response(_({"detail":"issue deleted of this project"}))
+            return Response({"detail":"issue deleted of this project"})
         except Issues.DoesNotExist:
             raise Http404
 
@@ -268,13 +266,27 @@ class CommentDetail(APIView):
             raise Http404
 
     def get(self, request, project_id, issue_id, comment_id):
+        # Check if user is contributor or author
         contributor = Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project_id=project_id)
         author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project_id))
         if contributor.exists() or author.exists():
+
+            # Check if comment_id correspond to issue_id
+            # Check if issue_id correspond to project_id
             try:
-                comment = Comments.objects.get(id=comment_id)
-                serializer = CommentSerializer(comment)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                if project_id == Issues.objects.get(id=issue_id).project_id.id:
+                    if issue_id == Comments.objects.get(id=comment_id).issue_id.id:
+
+                        comment = Comments.objects.get(id=comment_id)
+                        serializer = CommentSerializer(comment)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+
+                    else:
+                        return Response({"detail": "Comment not attach to this issue."}, status=status.HTTP_403_FORBIDDEN)
+                else:
+                    return Response({"detail": "Issue not in project."}, status=status.HTTP_403_FORBIDDEN)
+            except Issues.DoesNotExist:
+                raise Http404
             except Comments.DoesNotExist:
                 raise Http404
         else:
