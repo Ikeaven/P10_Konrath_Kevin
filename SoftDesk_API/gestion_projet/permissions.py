@@ -16,7 +16,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 class IsOwnerOrContributor(permissions.BasePermission):
     """
-    Object-level permission to only allow owners or contributors of a project
+    Object-level permission to only allow owners for update or contributors of a project
     """
     def has_object_permission(self, request, view, project):
         if request.method == 'GET':
@@ -26,7 +26,7 @@ class IsOwnerOrContributor(permissions.BasePermission):
                 return True
             else:
                 return False
-        elif request.method in ('PUT', 'DELETE', 'UPDATE', 'PATCH', 'POST'):
+        elif request.method in ('PUT', 'DELETE', 'PATCH', 'POST'):
             author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
             if author.exists():
                 return True
