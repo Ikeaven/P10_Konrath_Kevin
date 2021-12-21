@@ -115,7 +115,7 @@ class ContributorsList(APIView):
 
     def post(self, request, project_id, format=None):
         try:
-            user = User.objects.get(email=request.POST.get('email'))
+            user = User.objects.get(email=request.POST.get('collaborator'))
         except User.DoesNotExist:
             raise Http404
         serializer = CreateContributorSerializer(data=request.data)
@@ -261,7 +261,7 @@ class CommentDetail(APIView):
             comment = Comments.objects.get(id=comment_id)
             self.check_object_permissions(request, comment)
             comment.delete()
-            return Response(_('comment deleted'))
+            return Response({"detail":'comment deleted'})
         except Comments.DoesNotExist:
             raise Http404
 
