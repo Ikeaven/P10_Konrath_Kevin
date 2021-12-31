@@ -3,7 +3,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.password_validation import CommonPasswordValidator, MinimumLengthValidator, NumericPasswordValidator, validate_password
+from django.core.exceptions import ValidationError
 
 from .models import User
 from .serializers import UserSerializer
@@ -28,6 +31,11 @@ def signup(request):
         password = request.POST.get('password')
         if not password:
             raise ValueError(_('password must be set'))
+        try:
+            validate_password(password, [MinimumLengthValidator, CommonPasswordValidator, NumericPasswordValidator])
+        except ValidationError as err:
+            return Response({"detail": err}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
 
     user = User.objects.filter(email=email)
     if not user.exists():
