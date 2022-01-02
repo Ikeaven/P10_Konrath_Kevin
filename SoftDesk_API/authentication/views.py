@@ -1,17 +1,20 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login
-from rest_framework.views import APIView
+# from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.password_validation import CommonPasswordValidator, MinimumLengthValidator, NumericPasswordValidator, validate_password
+from django.contrib.auth.password_validation import CommonPasswordValidator, MinimumLengthValidator
+from django.contrib.auth.password_validation import NumericPasswordValidator, validate_password
 from django.core.exceptions import ValidationError
 
 from .models import User
-from .serializers import UserSerializer
+# from .serializers import UserSerializer
 
 # TODO : passer par une class APIView comme le reste de l'app
+
+
 @api_view(['POST'])
 def signup(request):
     # return Response('Utilisateur connecté')
@@ -35,7 +38,6 @@ def signup(request):
             validate_password(password, [MinimumLengthValidator, CommonPasswordValidator, NumericPasswordValidator])
         except ValidationError as err:
             return Response({"detail": err}, status=status.HTTP_406_NOT_ACCEPTABLE)
-
 
     user = User.objects.filter(email=email)
     if not user.exists():

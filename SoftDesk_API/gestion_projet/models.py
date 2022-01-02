@@ -13,19 +13,24 @@ class Projects(models.Model):
     type = models.CharField(max_length=250)
     # TODO : passer l'author en manyToMany
     author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='user', on_delete=models.CASCADE, null=True)
-    contributor = models.ManyToManyField(settings.AUTH_USER_MODEL, through='Contributors', related_name='contributions')
+    contributor = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Contributors',
+        related_name='contributions'
+    )
 
     class Meta:
         verbose_name = _('Project')
         verbose_name_plural = _('Projects')
 
     def __str__(self):
-        return  'id : ' + str(self.id) + ' - title : ' + str(self.title)
+        return 'id : ' + str(self.id) + ' - title : ' + str(self.title)
+
 
 class Contributors(models.Model):
 
     PERMISSIONS_CHOICES = (
-        ("author","author"),
+        ("author", "author"),
         ("contributor", "contributor"),
     )
 
@@ -43,6 +48,7 @@ class Contributors(models.Model):
     def __str__(self):
         return str(self.user)
 
+
 class Issues(models.Model):
     title = models.CharField(max_length=250)
     project_id = models.ForeignKey(Projects, related_name='project', on_delete=models.CASCADE)
@@ -50,9 +56,15 @@ class Issues(models.Model):
 
     description = models.CharField(max_length=350, blank=True, null=True)
     tag = models.CharField(max_length=150, blank=True, null=True)
-    priority =models.CharField(max_length=150, blank=True, null=True)
+    priority = models.CharField(max_length=150, blank=True, null=True)
     status = models.CharField(max_length=250, null=True, blank=True)
-    assignee_user_id = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='assignee_user', on_delete=SET_NULL, blank=True, null=True)
+    assignee_user_id = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='assignee_user',
+        on_delete=SET_NULL,
+        blank=True,
+        null=True
+    )
     created_time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -61,7 +73,7 @@ class Issues(models.Model):
 
 
 class Comments(models.Model):
-    description = models.CharField(max_length = 250)
+    description = models.CharField(max_length=250)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     issue_id = models.ForeignKey(Issues, on_delete=models.CASCADE)
     created_time = models.DateTimeField(auto_now_add=True)
