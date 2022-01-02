@@ -22,7 +22,8 @@ class IsOwnerOrContributor(permissions.BasePermission):
         if request.method == 'GET':
             contributor = (Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project=project))
             author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
-            if contributor.exists() or author.exists():
+            if contributor.exists():
+            # if contributor:
                 return True
             else:
                 return False
