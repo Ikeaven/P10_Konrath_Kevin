@@ -99,7 +99,7 @@ class ProjectList(generics.ListCreateAPIView):
 #             project = Projects.objects.get(pk=project_id)
 #             return project
 #         except Projects.DoesNotExist:
-#             raise Http404
+#             return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
 #     def get(self, request, project_id, format=None):
 #         project = self.get_object(request, project_id)
@@ -140,6 +140,10 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
 
 # ------------------------------------------------------------------------------------
 
+
+##################################
+#  Contributor list with APIView #
+##################################
 class ContributorsList(APIView):
     """
     List all project's collaborators, or attach a new collaborator.
@@ -160,13 +164,13 @@ class ContributorsList(APIView):
         try:
             user = User.objects.get(email=request.POST.get('collaborator'))
         except User.DoesNotExist:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = CreateContributorSerializer(data=request.data)
         try:
             project = Projects.objects.get(pk=project_id)
             self.check_object_permissions(request, project)
         except Projects.DoesNotExist:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
         try:
             Contributors.objects.get(user=user, project=project)
             return Response({"detail":"contributor already added"}, status=status.HTTP_409_CONFLICT)
@@ -198,7 +202,7 @@ class DeleteContributor(APIView):
                 contributor.delete()
                 return Response(({"detail":"user deleted of this project"}))
         except Contributors.DoesNotExist:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 #########################################################
@@ -225,7 +229,7 @@ class DeleteContributor(APIView):
 #             project = Projects.objects.get(pk=project_id)
 #             self.check_object_permissions(request, project)
 #         except Projects.DoesNotExist:
-#             raise Http404
+#             return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 #         if serializer.is_valid():
 #             issue = serializer.save(author=request.user, project_id=project)
 #             issue_serializer = IssueSerializer(issue)
@@ -256,7 +260,7 @@ class DeleteContributor(APIView):
 #             issue.delete()
 #             return Response({"detail":"issue deleted of this project"})
 #         except Issues.DoesNotExist:
-#             raise Http404
+#             return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
 # ------------------------------------------------------------------------------------
 
@@ -296,7 +300,7 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
         elif self.action in ('list', 'create'):
             self.permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
         else:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
         return super(self.__class__, self).get_permissions()
 
     def list(self, request, project_id):
@@ -312,7 +316,7 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
             project = Projects.objects.get(pk=project_id)
             self.check_object_permissions(request, project)
         except Projects.DoesNotExist:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
         if serializer.is_valid():
             issue = serializer.save(author=request.user, project_id=project)
             issue_serializer = IssueSerializer(issue)
@@ -339,10 +343,14 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
             return Response({"detail":"issue deleted of this project"})
         except Issues.DoesNotExist:
             print('YOUPLABOUM')
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
+
+# ------------------------------------------------------------------------------------
 
 
-
+########################################
+#  Comment list - create with APIview  #
+########################################
 class CommentsList(APIView):
     """
     List Comments binded to an issue, or create a comment
@@ -370,6 +378,9 @@ class CommentsList(APIView):
             return Response(comment_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+##################################################
+#  Comment update - delete - get : with APIview  #
+##################################################
 
 class CommentDetail(APIView):
     """
@@ -398,30 +409,28 @@ class CommentDetail(APIView):
             comment.delete()
             return Response({"detail":'comment deleted'})
         except Comments.DoesNotExist:
-            raise Http404
+            return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
     def get(self, request, project_id, issue_id, comment_id):
         # Check if user is contributor or author
         contributor = Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project_id=project_id)
         author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project_id))
         if contributor.exists() or author.exists():
-            # Check if comment_id correspond to issue_id
-            # Check if issue_id correspond to project_id
             try:
+                # Check if comment_id correspond to issue_id
                 if project_id == Issues.objects.get(id=issue_id).project_id.id:
+                    # Check if issue_id correspond to comment_id
                     if issue_id == Comments.objects.get(id=comment_id).issue_id.id:
-
                         comment = Comments.objects.get(id=comment_id)
                         serializer = CommentSerializer(comment)
                         return Response(serializer.data, status=status.HTTP_200_OK)
-
                     else:
                         return Response({"detail": "Comment not attach to this issue."}, status=status.HTTP_403_FORBIDDEN)
                 else:
                     return Response({"detail": "Issue not in project."}, status=status.HTTP_403_FORBIDDEN)
             except Issues.DoesNotExist:
-                raise Http404
+                return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
             except Comments.DoesNotExist:
-                raise Http404
+                return Response({"detail":"Not Found"}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
