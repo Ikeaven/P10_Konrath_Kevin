@@ -1,7 +1,7 @@
 from rest_framework import permissions
-from gestion_projet.models import Projects
+from gestion_projet.models import Projects, Issues, Contributors
 
-from gestion_projet.models import Contributors
+
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -14,22 +14,52 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
         return obj.author == request.user
 
-class IsOwnerOrContributor(permissions.BasePermission):
+# class IsProjectOwnerOrContributor(permissions.BasePermission):
+#     """
+#     Object-level permission to only allow owners for update or contributors of a project
+#     """
+#     def has_object_permission(self, request, view, project):
+#         if request.method == 'GET':
+#             contributor = (Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project=project))
+#             author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
+#             if contributor.exists() or author.exists():
+#                 return True
+#             else:
+#                 return False
+#         elif request.method in ('PUT', 'DELETE', 'PATCH', 'POST'):
+#             # TODO : LIGNE DU DESSOUS A VERIFIER ...
+#             author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
+#             if author.exists():
+#                 return True
+#             else:
+#                 return False
+#         else:
+#             return False
+
+
+class IsProjectOwnerOrContributor(permissions.BasePermission):
     """
     Object-level permission to only allow owners for update or contributors of a project
     """
     def has_object_permission(self, request, view, project):
-        if request.method == 'GET':
-            contributor = (Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project=project))
-            author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
-            if contributor.exists():
-            # if contributor:
-                return True
-            else:
-                return False
-        elif request.method in ('PUT', 'DELETE', 'PATCH', 'POST'):
-            author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project.id))
-            if author.exists():
+        contributor = (Contributors.objects.filter(project=project) & Contributors.objects.filter(user=request.user))
+        if contributor.exists():
+            return True
+        else:
+            return False
+
+
+class IsIssueAuthor(permissions.BasePermission):
+    message = "Access denied, you don't have permissions to do this"
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Check permission for issues
+        obj is a list => [issue, project]
+        """
+        contributor = (Contributors.objects.filter(project=obj[1]) & Contributors.objects.filter(user=request.user))
+        if contributor.exists():
+            if obj[0] in Issues.objects.filter(author=request.user) :
                 return True
             else:
                 return False

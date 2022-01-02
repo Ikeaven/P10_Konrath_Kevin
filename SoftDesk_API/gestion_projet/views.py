@@ -1,30 +1,26 @@
-import re
 from django.conf import settings
 from django.http import Http404
 from rest_framework import status
-from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
-from rest_framework import permissions, generics
 
-# from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
+from rest_framework import generics, viewsets
+
+
 from gestion_projet.serializers import ContributorsSerializer
-
-
-# from rest_framework.fields import CurrentUserDefault
-
 from authentication.models import User
 from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
-from gestion_projet.serializers import ProjectSerializer, InputProjectSerializer, CreateContributorSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
-from gestion_projet.permissions import IsOwnerOrReadOnly, IsOwnerOrContributor
+from gestion_projet.serializers import ProjectSerializer, CreateContributorSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
+from gestion_projet.permissions import IsOwnerOrReadOnly, IsProjectOwnerOrContributor, IsIssueAuthor
+
 
 ##############################
 # PROJECT LIST WITH API WIEW #
 ##############################
+
 # class ProjectList(APIView):
 #     """
 #     List all projects, or create a new project.
@@ -53,6 +49,8 @@ from gestion_projet.permissions import IsOwnerOrReadOnly, IsOwnerOrContributor
 #             return Response(project_serializer.data, status=status.HTTP_200_OK)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# ------------------------------------------------------------------------------------
+
 ##############################
 # PROJECT LIST WITH GENERICS #
 ##############################
@@ -64,7 +62,7 @@ class ProjectList(generics.ListCreateAPIView):
 
     queryset = Projects.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+    permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
 
     def get_queryset(self):
         user = self.request.user
@@ -84,6 +82,7 @@ class ProjectList(generics.ListCreateAPIView):
                 role = 'auhtor'
             )
 
+# ------------------------------------------------------------------------------------
 
 #################################
 #  Project detail with APIView  #
@@ -123,26 +122,29 @@ class ProjectList(generics.ListCreateAPIView):
 #         project.delete()
 #         return Response({"detail":'Project Deleted'}, status=status.HTTP_200_OK)
 
+# ------------------------------------------------------------------------------------
 
 #################################
 #  Project detail with generics #
 #################################
 
 class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
-
+    """
+    Retrieve, update or delete a project instance.
+    """
     queryset = Projects.objects.all()
     serializer_class = ProjectSerializer
     lookup_url_kwarg = 'project_id'
     lookup_field = 'id'
-    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+    permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
 
-
+# ------------------------------------------------------------------------------------
 
 class ContributorsList(APIView):
     """
     List all project's collaborators, or attach a new collaborator.
     """
-    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+    permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
 
     def get(self, request, project_id, format=None):
         users = User.objects.filter(contributions=project_id)
@@ -199,21 +201,112 @@ class DeleteContributor(APIView):
             raise Http404
 
 
-class IssuesList(APIView):
-    """
-    List all issues of a selected project, or create an issue.
-    """
+#########################################################
+#  Issues list - create - update - delete with APIView  #
+#########################################################
 
-    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+# class IssuesList(APIView):
+#     """
+#     List all issues of a selected project, or create an issue.
+#     """
 
-    def get(self, request, project_id, format=None):
-        project = Projects.objects.get(id=project_id)
+#     permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+
+#     def get(self, request, project_id, format=None):
+#         project = Projects.objects.get(id=project_id)
+#         self.check_object_permissions(request, project)
+#         issues = Issues.objects.filter(project_id=project_id)
+#         serializer = IssueSerializer(issues, many=True)
+#         return Response(serializer.data)
+
+#     def post(self, request, project_id, format=None):
+#         serializer = InputIssueSerializer(data=request.data)
+#         try:
+#             project = Projects.objects.get(pk=project_id)
+#             self.check_object_permissions(request, project)
+#         except Projects.DoesNotExist:
+#             raise Http404
+#         if serializer.is_valid():
+#             issue = serializer.save(author=request.user, project_id=project)
+#             issue_serializer = IssueSerializer(issue)
+#             return Response(issue_serializer.data, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# class IssueDetail(APIView):
+#     """
+#     Update an issue or delete it.
+#     """
+#     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+
+#     def put(self, request, project_id, issue_id):
+#         issue = Issues.objects.get(pk=issue_id)
+#         self.check_object_permissions(request, issue)
+#         serializer = InputIssueSerializer(issue, data=request.data, partial=True)
+#         if serializer.is_valid():
+#             issue = serializer.save(author_user_id=issue.author, project_id=issue.project_id)
+#             issue_serializer = IssueSerializer(issue)
+#             return Response(issue_serializer.data, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#     def delete(self, request, project_id, issue_id):
+#         try:
+#             issue = Issues.objects.get(pk=issue_id, project_id=project_id)
+#             self.check_object_permissions(request, issue)
+#             issue.delete()
+#             return Response({"detail":"issue deleted of this project"})
+#         except Issues.DoesNotExist:
+#             raise Http404
+
+# ------------------------------------------------------------------------------------
+
+
+##############################################################
+#  Issues list - create - update - delete with ModelViewSet  #
+##############################################################
+
+
+class MultipleFieldLookupMixin:
+    """
+    Apply this mixin to any view or viewset to get multiple field filtering
+    based on a `lookup_fields` attribute, instead of the default single field filtering.
+    """
+    def get_object(self):
+        queryset = self.get_queryset()             # Get the base queryset
+        queryset = self.filter_queryset(queryset)  # Apply any filter backends
+        filter = {}
+        for field in self.lookup_fields:
+            if self.kwargs[field]: # Ignore empty fields.
+                filter[field] = self.kwargs[field]
+        obj = generics.get_object_or_404(queryset, **filter)  # Lookup the object
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
+    """
+    A viewset for viewing and editing user instances.
+    """
+    queryset = Issues.objects.all()
+    serializer_class = IssueSerializer
+    lookup_fields = ('project_id', 'pk')
+
+    def get_permissions(self):
+        if self.action in ('update', 'destroy'):
+            self.permission_classes = [IsAuthenticated, IsIssueAuthor]
+        elif self.action in ('list', 'create'):
+            self.permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
+        else:
+            raise Http404
+        return super(self.__class__, self).get_permissions()
+
+    def list(self, request, project_id):
+        project = Projects.objects.get(pk=project_id)
         self.check_object_permissions(request, project)
-        issues = Issues.objects.filter(project_id=project_id)
-        serializer = IssueSerializer(issues, many=True)
+        queryset = Issues.objects.filter(project_id=project_id)
+        serializer = IssueSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    def post(self, request, project_id, format=None):
+    def create(self, request, project_id, *args, **kwargs):
         serializer = InputIssueSerializer(data=request.data)
         try:
             project = Projects.objects.get(pk=project_id)
@@ -226,16 +319,10 @@ class IssuesList(APIView):
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class IssueDetail(APIView):
-    """
-    Update an issue or delete it.
-    """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-
-    def put(self, request, project_id, issue_id):
-        issue = Issues.objects.get(pk=issue_id)
-        self.check_object_permissions(request, issue)
+    def update(self, request, project_id, pk, *args, **kwargs):
+        project = Projects.objects.get(pk=project_id)
+        issue = Issues.objects.get(pk=pk)
+        self.check_object_permissions(request, [issue, project])
         serializer = InputIssueSerializer(issue, data=request.data, partial=True)
         if serializer.is_valid():
             issue = serializer.save(author_user_id=issue.author, project_id=issue.project_id)
@@ -243,14 +330,17 @@ class IssueDetail(APIView):
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, project_id, issue_id):
+    def destroy(self, request, project_id, pk):
         try:
-            issue = Issues.objects.get(pk=issue_id, project_id=project_id)
-            self.check_object_permissions(request, issue)
+            project = Projects.objects.get(pk=project_id)
+            issue = Issues.objects.get(pk=pk)
+            self.check_object_permissions(request, [issue, project])
             issue.delete()
             return Response({"detail":"issue deleted of this project"})
         except Issues.DoesNotExist:
+            print('YOUPLABOUM')
             raise Http404
+
 
 
 class CommentsList(APIView):
@@ -258,7 +348,8 @@ class CommentsList(APIView):
     List Comments binded to an issue, or create a comment
     """
 
-    permission_classes = [IsAuthenticated, IsOwnerOrContributor]
+    # TODO : COMMENT PERMISSIONS
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id, issue_id):
         # TODO ; ajouter la verification du projet
