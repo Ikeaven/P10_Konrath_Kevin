@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from gestion_projet.models import Projects, Issues, Contributors
+from gestion_projet.models import Issues, Contributors, Comments
 
 
 
@@ -60,6 +60,23 @@ class IsIssueAuthor(permissions.BasePermission):
         contributor = (Contributors.objects.filter(project=obj[1]) & Contributors.objects.filter(user=request.user))
         if contributor.exists():
             if obj[0] in Issues.objects.filter(author=request.user) :
+                return True
+            else:
+                return False
+        else:
+            return False
+
+class IsCommentAuthor(permissions.BasePermission):
+    message = "Access denied, you don't have permissions to do this"
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Check permission for comment
+        obj is a list => [comment, project]
+        """
+        contributor = (Contributors.objects.filter(project=obj[1]) & Contributors.objects.filter(user=request.user))
+        if contributor.exists():
+            if obj[0] in Comments.objects.filter(author=request.user) :
                 return True
             else:
                 return False

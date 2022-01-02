@@ -25,8 +25,8 @@ class Projects(models.Model):
 class Contributors(models.Model):
 
     PERMISSIONS_CHOICES = (
-        ("1","author"),
-        ("2", "contributor"),
+        ("author","author"),
+        ("contributor", "contributor"),
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='contrib', on_delete=models.CASCADE)

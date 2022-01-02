@@ -14,7 +14,7 @@ from authentication.models import User
 from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
 from gestion_projet.serializers import ProjectSerializer, CreateContributorSerializer, IssueSerializer, InputIssueSerializer, CommentSerializer, InputCommentSerializer
-from gestion_projet.permissions import IsOwnerOrReadOnly, IsProjectOwnerOrContributor, IsIssueAuthor
+from gestion_projet.permissions import IsOwnerOrReadOnly, IsProjectOwnerOrContributor, IsIssueAuthor, IsCommentAuthor
 
 
 ##############################
@@ -348,8 +348,7 @@ class CommentsList(APIView):
     List Comments binded to an issue, or create a comment
     """
 
-    # TODO : COMMENT PERMISSIONS
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
 
     def get(self, request, project_id, issue_id):
         # TODO ; ajouter la verification du projet
@@ -376,11 +375,14 @@ class CommentDetail(APIView):
     """
     update / delete / get : comment with an id
     """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    # TODO : IsCommentOwner
+    permission_classes = [IsAuthenticated, IsCommentAuthor]
+
 
     def put(self, request, project_id, issue_id, comment_id):
         comment = Comments.objects.get(id=comment_id)
-        self.check_object_permissions(request, comment)
+        project = Projects.objects.get(id=project_id)
+        self.check_object_permissions(request, [comment, project])
         serializer = CommentSerializer(comment, data=request.data, partial=True)
         if serializer.is_valid():
             comment = serializer.save()
@@ -391,7 +393,8 @@ class CommentDetail(APIView):
     def delete(self, request, project_id, issue_id, comment_id):
         try:
             comment = Comments.objects.get(id=comment_id)
-            self.check_object_permissions(request, comment)
+            project = Projects.objects.get(id=project_id)
+            self.check_object_permissions(request, [comment, project])
             comment.delete()
             return Response({"detail":'comment deleted'})
         except Comments.DoesNotExist:
@@ -402,7 +405,6 @@ class CommentDetail(APIView):
         contributor = Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project_id=project_id)
         author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project_id))
         if contributor.exists() or author.exists():
-
             # Check if comment_id correspond to issue_id
             # Check if issue_id correspond to project_id
             try:
