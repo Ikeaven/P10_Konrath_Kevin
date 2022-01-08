@@ -1,4 +1,5 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
+
 ![forthebadge](https://img.shields.io/badge/Framework-DRF-green)
 
 # P10_Konrath_Kevin
@@ -54,5 +55,7 @@ Si le port n'est pas disponible :
 Ouvrir un navigateur, et aller à l'adresse du site en ajouter /admin/.
 ex : http://127.0.0.1:8000/admin/
 
+
+## 7. Documentation de l'API
 Vous retrouverez la documentation de l'API à l'adresse suivante :
 https://documenter.getpostman.com/view/11117999/UVRBn6ni
