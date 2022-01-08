@@ -1,5 +1,4 @@
-## Technologies
-- Python
+[![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
 
 # P10_Konrath_Kevin
 Créez une API sécurisée RESTful en utilisant Django REST
