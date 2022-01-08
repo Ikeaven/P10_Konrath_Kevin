@@ -1,5 +1,5 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
-[![forthebadge](https://img.shields.io/badge/Framework-DRF-green)
+![forthebadge](https://img.shields.io/badge/Framework-DRF-green)
 
 # P10_Konrath_Kevin
 Créez une API sécurisée RESTful en utilisant Django REST
