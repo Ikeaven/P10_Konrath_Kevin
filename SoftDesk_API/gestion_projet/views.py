@@ -1,6 +1,7 @@
 # from django.conf import settings
 # from django.http import Http404
 from rest_framework import status
+
 # from django.utils.translation import ugettext_lazy as _
 
 from rest_framework.permissions import IsAuthenticated
@@ -13,9 +14,22 @@ from gestion_projet.serializers import ContributorsSerializer
 from authentication.models import User
 from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
-from gestion_projet.serializers import ProjectSerializer, CreateContributorSerializer, IssueSerializer
-from gestion_projet.serializers import InputIssueSerializer, CommentSerializer, InputCommentSerializer
-from gestion_projet.permissions import IsOwnerOrReadOnly, IsProjectOwnerOrContributor, IsIssueAuthor, IsCommentAuthor
+from gestion_projet.serializers import (
+    ProjectSerializer,
+    CreateContributorSerializer,
+    IssueSerializer,
+)
+from gestion_projet.serializers import (
+    InputIssueSerializer,
+    CommentSerializer,
+    InputCommentSerializer,
+)
+from gestion_projet.permissions import (
+    IsOwnerOrReadOnly,
+    IsProjectOwnerOrContributor,
+    IsIssueAuthor,
+    IsCommentAuthor,
+)
 
 
 ##############################
@@ -56,6 +70,7 @@ from gestion_projet.permissions import IsOwnerOrReadOnly, IsProjectOwnerOrContri
 # PROJECT LIST WITH GENERICS #
 ##############################
 
+
 class ProjectList(generics.ListCreateAPIView):
     """
     List all project, or create a new project
@@ -77,11 +92,9 @@ class ProjectList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         project = serializer.save(author=self.request.user)
         Contributors.objects.create(
-            user=self.request.user,
-            project=project,
-            permission="author",
-            role='auhtor'
+            user=self.request.user, project=project, permission="author", role="auhtor"
         )
+
 
 # ------------------------------------------------------------------------------------
 
@@ -134,11 +147,13 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update or delete a project instance.
     """
+
     queryset = Projects.objects.all()
     serializer_class = ProjectSerializer
-    lookup_url_kwarg = 'project_id'
-    lookup_field = 'id'
+    lookup_url_kwarg = "project_id"
+    lookup_field = "id"
     permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
+
 
 # ------------------------------------------------------------------------------------
 
@@ -150,6 +165,7 @@ class ContributorsList(APIView):
     """
     List all project's collaborators, or attach a new collaborator.
     """
+
     permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
 
     def get(self, request, project_id, format=None):
@@ -160,11 +176,14 @@ class ContributorsList(APIView):
             serializer = UserSerializer(users, many=True)
             return Response(serializer.data)
         else:
-            return Response({"detail": "No Collaborator for this project"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "No Collaborator for this project"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
     def post(self, request, project_id, format=None):
         try:
-            user = User.objects.get(email=request.POST.get('collaborator'))
+            user = User.objects.get(email=request.POST.get("collaborator"))
         except User.DoesNotExist:
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = CreateContributorSerializer(data=request.data)
@@ -175,7 +194,9 @@ class ContributorsList(APIView):
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
         try:
             Contributors.objects.get(user=user, project=project)
-            return Response({"detail": "contributor already added"}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {"detail": "contributor already added"}, status=status.HTTP_409_CONFLICT
+            )
         except Contributors.DoesNotExist:
 
             if serializer.is_valid():
@@ -190,6 +211,7 @@ class DeleteContributor(APIView):
     """
     Delete a contributor of the selected project.
     """
+
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def delete(self, request, project_id, user_id):
@@ -199,7 +221,10 @@ class DeleteContributor(APIView):
             projet = Projects.objects.get(id=project_id)
             self.check_object_permissions(request, projet)
             if contributor.user == projet.author:
-                return Response(({"detail": "Author cannot be deleted"}), status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    ({"detail": "Author cannot be deleted"}),
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             else:
                 contributor.delete()
                 return Response(({"detail": "user deleted of this project"}))
@@ -277,8 +302,9 @@ class MultipleFieldLookupMixin:
     Apply this mixin to any view or viewset to get multiple field filtering
     based on a `lookup_fields` attribute, instead of the default single field filtering.
     """
+
     def get_object(self):
-        queryset = self.get_queryset()             # Get the base queryset
+        queryset = self.get_queryset()  # Get the base queryset
         queryset = self.filter_queryset(queryset)  # Apply any filter backends
         filter = {}
         for field in self.lookup_fields:
@@ -293,14 +319,15 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
     """
     A viewset for viewing and editing user instances.
     """
+
     queryset = Issues.objects.all()
     serializer_class = IssueSerializer
-    lookup_fields = ('project_id', 'pk')
+    lookup_fields = ("project_id", "pk")
 
     def get_permissions(self):
-        if self.action in ('update', 'destroy'):
+        if self.action in ("update", "destroy"):
             self.permission_classes = [IsAuthenticated, IsIssueAuthor]
-        elif self.action in ('list', 'create'):
+        elif self.action in ("list", "create"):
             self.permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
         else:
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
@@ -321,7 +348,15 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
         except Projects.DoesNotExist:
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
         if serializer.is_valid():
-            issue = serializer.save(author=request.user, project_id=project)
+            print(request.data)
+            if "assignee_user_id" not in request.data:
+                issue = serializer.save(
+                    author=request.user,
+                    project_id=project,
+                    assignee_user_id=request.user,
+                )
+            else:
+                issue = serializer.save(author=request.user, project_id=project)
             issue_serializer = IssueSerializer(issue)
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -332,7 +367,9 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
         self.check_object_permissions(request, [issue, project])
         serializer = InputIssueSerializer(issue, data=request.data, partial=True)
         if serializer.is_valid():
-            issue = serializer.save(author_user_id=issue.author, project_id=issue.project_id)
+            issue = serializer.save(
+                author_user_id=issue.author, project_id=issue.project_id
+            )
             issue_serializer = IssueSerializer(issue)
             return Response(issue_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -345,8 +382,9 @@ class IssueViewSet(MultipleFieldLookupMixin, viewsets.ModelViewSet):
             issue.delete()
             return Response({"detail": "issue deleted of this project"})
         except Issues.DoesNotExist:
-            print('YOUPLABOUM')
+            print("YOUPLABOUM")
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 # ------------------------------------------------------------------------------------
 
@@ -381,6 +419,7 @@ class CommentsList(APIView):
             return Response(comment_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 ##################################################
 #  Comment update - delete - get : with APIview  #
 ##################################################
@@ -390,6 +429,7 @@ class CommentDetail(APIView):
     """
     update / delete / get : comment with an id
     """
+
     # TODO : IsCommentOwner
     permission_classes = [IsAuthenticated, IsCommentAuthor]
 
@@ -410,16 +450,18 @@ class CommentDetail(APIView):
             project = Projects.objects.get(id=project_id)
             self.check_object_permissions(request, [comment, project])
             comment.delete()
-            return Response({"detail": 'comment deleted'})
+            return Response({"detail": "comment deleted"})
         except Comments.DoesNotExist:
             return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
     def get(self, request, project_id, issue_id, comment_id):
         # Check if user is contributor or author
-        contributor = (
-            Contributors.objects.filter(user=request.user) & Contributors.objects.filter(project_id=project_id)
+        contributor = Contributors.objects.filter(
+            user=request.user
+        ) & Contributors.objects.filter(project_id=project_id)
+        author = Projects.objects.filter(author=request.user) & Projects.objects.filter(
+            id=project_id
         )
-        author = (Projects.objects.filter(author=request.user) & Projects.objects.filter(id=project_id))
         if contributor.exists() or author.exists():
             try:
                 # Check if comment_id correspond to issue_id
@@ -432,16 +474,23 @@ class CommentDetail(APIView):
                     else:
                         return Response(
                             {"detail": "Comment not attach to this issue."},
-                            status=status.HTTP_403_FORBIDDEN
+                            status=status.HTTP_403_FORBIDDEN,
                         )
                 else:
-                    return Response({"detail": "Issue not in project."}, status=status.HTTP_403_FORBIDDEN)
+                    return Response(
+                        {"detail": "Issue not in project."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
             except Issues.DoesNotExist:
-                return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND
+                )
             except Comments.DoesNotExist:
-                return Response({"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {"detail": "Not Found"}, status=status.HTTP_404_NOT_FOUND
+                )
         else:
             return Response(
                 {"detail": "You do not have permission to perform this action."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
