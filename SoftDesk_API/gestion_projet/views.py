@@ -16,10 +16,9 @@ from authentication.serializers import UserSerializer
 from gestion_projet.models import Projects, Contributors, Issues, Comments
 from gestion_projet.serializers import (
     ProjectSerializer,
+    InputProjectSerializer,
     CreateContributorSerializer,
     IssueSerializer,
-)
-from gestion_projet.serializers import (
     InputIssueSerializer,
     CommentSerializer,
     InputCommentSerializer,
@@ -149,10 +148,20 @@ class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
     """
 
     queryset = Projects.objects.all()
-    serializer_class = ProjectSerializer
+    # serializer_class = ProjectSerializer
     lookup_url_kwarg = "project_id"
     lookup_field = "id"
-    permission_classes = [IsAuthenticated, IsProjectOwnerOrContributor]
+    permission_classes = [
+        IsAuthenticated,
+        IsProjectOwnerOrContributor,
+        IsOwnerOrReadOnly,
+    ]
+
+    def get_serializer_class(self):
+        if self.request.method == "GET":
+            return ProjectSerializer
+        else:
+            return InputProjectSerializer
 
 
 # ------------------------------------------------------------------------------------
